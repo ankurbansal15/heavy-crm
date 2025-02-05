@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* White */
+    --foreground: 220 15% 15%; /* Dark blue for text */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 220 15% 15%; /* Dark blue for text */
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 220 15% 15%; /* Dark blue for text */
+    --primary: 220 90% 56%; /* Blue */
+    --primary-foreground: 0 0% 100%; /* White */
+    --secondary: 220 25% 90%; /* Light blue */
+    --secondary-foreground: 220 15% 15%; /* Dark blue */
+    --muted: 220 25% 90%; /* Light blue */
+    --muted-foreground: 220 10% 50%; /* Medium blue */
+    --accent: 220 25% 90%; /* Light blue */
+    --accent-foreground: 220 15% 15%; /* Dark blue */
+    --destructive: 0 84.2% 60.2%; /* Red */
+    --destructive-foreground: 0 0% 100%; /* White */
+    --border: 220 20% 85%; /* Very light blue */
+    --input: 220 20% 85%; /* Very light blue */
+    --ring: 220 90% 56%; /* Blue */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 0%; /* Pure black */
+    --foreground: 0 0% 100%; /* Pure white */
+    --card: 0 0% 0%; /* Pure black */
+    --card-foreground: 0 0% 100%; /* Pure white */
+    --popover: 0 0% 0%; /* Pure black */
+    --popover-foreground: 0 0% 100%; /* Pure white */
+    --primary: 0 0% 100%; /* Pure white */
+    --primary-foreground: 0 0% 0%; /* Pure black */
+    --secondary: 0 0% 50%; /* Gray */
+    --secondary-foreground: 0 0% 100%; /* Pure white */
+    --muted: 0 0% 50%; /* Gray */
+    --muted-foreground: 0 0% 100%; /* Pure white */
+    --accent: 0 0% 50%; /* Gray */
+    --accent-foreground: 0 0% 100%; /* Pure white */
+    --destructive: 0 0% 100%; /* Pure white */
+    --destructive-foreground: 0 0% 0%; /* Pure black */
+    --border: 0 0% 50%; /* Gray */
+    --input: 0 0% 50%; /* Gray */
+    --ring: 0 0% 100%; /* Pure white */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.gradient-bg-1 {
+  @apply bg-black dark:bg-black;
+}
+
+.gradient-bg-2 {
+  @apply bg-black dark:bg-black;
+}
+
+.gradient-bg-3 {
+  @apply bg-black dark:bg-black;
+}
+
+.gradient-bg-4 {
+  @apply bg-black dark:bg-black;
+}
+
+.sidebar-collapsed {
+  width: 64px;
+}
+
+.sidebar-expanded {
+  width: 256px;
+}
+
+.sidebar-menu-item {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-menu-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted)) hsl(var(--background));
+}
+
