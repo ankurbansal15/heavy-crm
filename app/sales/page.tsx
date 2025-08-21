@@ -227,90 +227,108 @@ export default function SalesManagement() {
 
   const handleDragEnd = async (result: { active: any; over: any }) => {
     const { active, over } = result
+    
     if (!over || !currentPipeline) return
+
     const activeData = active.data?.current
     const overData = over.data?.current
 
-    // Stage reordering
+    // Handle stage reordering
     if (activeData?.type === 'stage' && overData?.type === 'stage') {
       const activeStage = activeData.stage
       const overStage = overData.stage
+      
       if (activeStage.id === overStage.id) return
-      const newStages = [...currentPipeline.stages]
-      const fromIdx = newStages.findIndex(s => s.id === activeStage.id)
-      const toIdx = newStages.findIndex(s => s.id === overStage.id)
-      const [moved] = newStages.splice(fromIdx, 1)
-      newStages.splice(toIdx, 0, moved)
-      const updatedStages = newStages.map((s,i)=> ({...s, position: i}))
+
+      const newStages = Array.from(currentPipeline.stages)
+      const activeIndex = newStages.findIndex(stage => stage.id === activeStage.id)
+      const overIndex = newStages.findIndex(stage => stage.id === overStage.id)
+
+      const [reorderedStage] = newStages.splice(activeIndex, 1)
+      newStages.splice(overIndex, 0, reorderedStage)
+
+      // Update positions
+      const updatedStages = newStages.map((stage, index) => ({
+        ...stage,
+        position: index
+      }))
+
       const updatedPipeline = { ...currentPipeline, stages: updatedStages }
       setPipelines(pipelines.map(p => p.id === updatedPipeline.id ? updatedPipeline : p))
       setCurrentPipeline(updatedPipeline)
-      // persist asynchronously (no await blocking UI)
-      supabase.from('stages').upsert(updatedStages.map(s => ({
-        id: s.id,
-        name: s.name,
-        position: s.position,
+
+      // Update stage positions in Supabase
+      const updates = updatedStages.map((stage, index) => ({
+        id: stage.id,
+        name: stage.name,
+        position: index,
         user_id: user?.id,
         pipeline_id: currentPipeline.id
-      })), { onConflict: 'id' })
-      return
-    }
+      }))
 
-    if (activeData?.type === 'opportunity') {
-      const activeOpp = activeData.opportunity
+      const { error } = await supabase
+        .from('stages')
+        .upsert(updates, { onConflict: 'id' })
+
+      if (error) {
+        console.error('Error updating stage positions:', error)
+      }
+    }
+    // Handle opportunity movement between stages
+    else if (activeData?.type === 'opportunity') {
+      const opportunity = activeData.opportunity
       let targetStageId = over.id
+
+      // If dropped over another opportunity, get the stage from that opportunity
       if (overData?.type === 'opportunity') {
         targetStageId = overData.opportunity.stage_id
-      } else if (overData?.type === 'stage') {
+      }
+      // If dropped over a stage area, use that stage
+      else if (overData?.type === 'stage') {
         targetStageId = overData.stage.id
       }
 
-      const isSameStage = activeOpp.stage_id === targetStageId
+      if (opportunity.stage_id === targetStageId) return
 
-      // Build array of opportunities for target stage (excluding active if moving between)
-      const currentList = opportunities.filter(o => o.stage_id === (isSameStage ? activeOpp.stage_id : targetStageId))
+      const updatedOpportunities = [...opportunities]
+      const opportunityIndex = updatedOpportunities.findIndex(opp => opp.id === opportunity.id)
+      
+      if (opportunityIndex === -1) return
 
-      // If over an opportunity compute index else append to end
-      let newIndex: number
-      if (overData?.type === 'opportunity' && overData.opportunity.id !== activeOpp.id) {
-        const overIndex = currentList.findIndex(o => o.id === overData.opportunity.id)
-        newIndex = overIndex === -1 ? currentList.length : overIndex
-      } else {
-        newIndex = currentList.length
-      }
-
-      const updated = [...opportunities]
-      const activeIndexGlobal = updated.findIndex(o => o.id === activeOpp.id)
-      if (activeIndexGlobal === -1) return
-
-      // Update active opportunity's stage if changed
-      updated[activeIndexGlobal] = {
-        ...updated[activeIndexGlobal],
+      // Update the opportunity's stage
+      updatedOpportunities[opportunityIndex] = {
+        ...updatedOpportunities[opportunityIndex],
         stage_id: targetStageId,
+        position: 0 // Place at the beginning of the new stage
       }
 
-      // Rebuild ordering for both old and new stage (or single stage if same)
-      const affectedStageIds = isSameStage ? [targetStageId] : [activeOpp.stage_id, targetStageId]
-      for (const sid of affectedStageIds) {
-        const stageItems = updated.filter(o => o.stage_id === sid && o.id !== activeOpp.id)
-        if (sid === targetStageId) {
-          // Insert active into position newIndex
-            stageItems.splice(newIndex, 0, updated[activeIndexGlobal])
-        } else if (!isSameStage) {
-          // nothing extra, active removed already
+      // Update positions of all opportunities in the target stage
+      const targetStageOpportunities = updatedOpportunities
+        .filter(opp => opp.stage_id === targetStageId)
+        .map((opp, index) => ({ ...opp, position: index }))
+
+      // Replace opportunities in the target stage with updated positions
+      const finalOpportunities = updatedOpportunities.map(opp => {
+        if (opp.stage_id === targetStageId) {
+          const updatedOpp = targetStageOpportunities.find(target => target.id === opp.id)
+          return updatedOpp || opp
         }
-        stageItems.forEach((o,i)=> { o.position = i })
-      }
+        return opp
+      })
 
-      setOpportunities(updated)
+      setOpportunities(finalOpportunities)
 
-      // Persist active opp stage/position (compute after state ordering)
-      const persisted = updated.find(o => o.id === activeOpp.id)
-      if (persisted) {
-        supabase.from('opportunities').update({
-          stage_id: persisted.stage_id,
-          position: persisted.position
-        }).eq('id', persisted.id)
+      // Update opportunity in Supabase
+      const { error } = await supabase
+        .from('opportunities')
+        .update({
+          stage_id: targetStageId,
+          position: 0
+        })
+        .eq('id', opportunity.id)
+
+      if (error) {
+        console.error('Error updating opportunity:', error)
       }
     }
   }

@@ -7,8 +7,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
-  DragOverlay,
+  closestCorners,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -365,21 +364,18 @@ export function KanbanBoard({
   onDeleteLead 
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [activeData, setActiveData] = useState<any>(null)
 
   // Configure sensors for drag detection
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 120, // allow click without starting drag
-        tolerance: 8,
+        distance: 8, // 8px of movement required to start drag
       },
-    }),
+    })
   )
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id.toString())
-    setActiveData(event.active.data.current)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -387,14 +383,12 @@ export function KanbanBoard({
     
     if (!over) {
       setActiveId(null)
-      setActiveData(null)
       return
     }
 
     // Pass the drag result to the parent component
     onDragEnd({ active, over })
     setActiveId(null)
-    setActiveData(null)
   }
 
   if (!currentPipeline) {
@@ -410,7 +404,7 @@ export function KanbanBoard({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -435,24 +429,7 @@ export function KanbanBoard({
           </SortableContext>
         </div>
       </div>
-      <DragOverlay dropAnimation={null}>
-        {activeData?.type === 'opportunity' && (
-          <div className="rounded-md bg-card border shadow-lg p-3 w-[300px] pointer-events-none">
-            <div className="font-medium text-sm mb-1 line-clamp-2">{activeData.opportunity.name}</div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>${activeData.opportunity.value?.toLocaleString()}</span>
-              <span>{activeData.opportunity.probability}%</span>
-            </div>
-          </div>
-        )}
-        {activeData?.type === 'stage' && (
-          <div className="min-w-[350px] bg-muted/60 rounded-lg p-4 shadow-lg">
-            <h3 className="font-semibold text-lg line-clamp-1">{activeData.stage.name}</h3>
-          </div>
-        )}
-      </DragOverlay>
     </DndContext>
   )
 }
-
 
