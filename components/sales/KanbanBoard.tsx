@@ -1,5 +1,22 @@
 import { useState } from 'react'
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  DragOverlay,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -15,12 +32,19 @@ import {
 interface Opportunity {
   id: string
   name: string
+  company?: string
+  contact_name?: string
+  email?: string
+  phone?: string
   value: number
   stage_id: string
   probability: number
   priority: string
-  date_added: string
   position: number
+  close_date?: string
+  notes?: string
+  created_at?: string
+  updated_at?: string
 }
 
 interface Pipeline {
@@ -38,7 +62,7 @@ interface Stage {
 interface KanbanBoardProps {
   opportunities: Opportunity[]
   currentPipeline: Pipeline | null
-  onDragEnd: (result: DropResult) => void
+  onDragEnd: (result: { active: any; over: any }) => void
   onMoveStage: (stageId: string, direction: 'forward' | 'backward') => void
   onEditStage: (oldStageId: string, newStageName: string) => void
   onDeleteStage: (stageId: string) => void
@@ -47,196 +71,388 @@ interface KanbanBoardProps {
   onDeleteLead: (id: string) => void
 }
 
-export function KanbanBoard({
-  opportunities,
-  currentPipeline,
-  onDragEnd,
-  onMoveStage,
-  onEditStage,
-  onDeleteStage,
-  onMoveLead,
-  onEditLead,
-  onDeleteLead
-}: KanbanBoardProps) {
-  const [editingStage, setEditingStage] = useState<string | null>(null)
-  const [showingStage, setShowingStage] = useState<string | null>(null)
-  const [showingLead, setShowingLead] = useState<Opportunity | null>(null)
+// Sortable Stage Component
+function SortableStage({ stage, opportunities, onEditStage, onDeleteStage, onMoveLead, onEditLead, onDeleteLead }: {
+  stage: Stage
+  opportunities: Opportunity[]
+  onEditStage: (stageId: string, newName: string) => void
+  onDeleteStage: (stageId: string) => void
+  onMoveLead: (lead: Opportunity, direction: 'forward' | 'backward') => void
+  onEditLead: (lead: Opportunity) => void
+  onDeleteLead: (id: string) => void
+}) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState(stage.name)
+  const [viewingLead, setViewingLead] = useState<Opportunity | null>(null)
 
-  if (!currentPipeline || !currentPipeline.stages) {
-    return <div>No pipeline data available.</div>
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: stage.id,
+    data: {
+      type: 'stage',
+      stage,
+    },
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  const stageOpportunities = opportunities.filter(opp => opp.stage_id === stage.id)
+    .sort((a, b) => (a.position || 0) - (b.position || 0))
+
+  const handleSaveEdit = () => {
+    if (editName.trim() && editName !== stage.name) {
+      onEditStage(stage.id, editName.trim())
+    }
+    setIsEditing(false)
   }
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="stages" direction="horizontal" type="STAGE">
-        {(provided) => (
-          <div {...provided.droppableProps} ref={provided.innerRef} className="flex gap-4 overflow-x-auto pb-4 min-w-max max-w-full">
-            {currentPipeline.stages.map((stage, stageIndex) => (
-              <Draggable key={stage.id} draggableId={stage.id} index={stageIndex}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    className="bg-secondary p-4 rounded-lg w-full min-w-[250px] max-w-[350px] flex-1"
-                  >
-                    <div className="flex flex-wrap justify-between items-center mb-2 gap-2" {...provided.dragHandleProps}>
-                      <h3 className="font-semibold truncate mr-2">{stage.name}</h3>
-                      <div className="flex flex-wrap gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => onMoveStage(stage.id, 'backward')} 
-                          disabled={stageIndex === 0}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => onMoveStage(stage.id, 'forward')} 
-                          disabled={stageIndex === currentPipeline.stages.length - 1}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setShowingStage(stage.id)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setEditingStage(stage.id)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => onDeleteStage(stage.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    {editingStage === stage.id && (
-                      <div className="mb-2 flex items-center gap-2">
-                        <Input
-                          defaultValue={stage.name}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              onEditStage(stage.id, e.currentTarget.value)
-                              setEditingStage(null)
-                            }
-                          }}
-                        />
-                        <Button size="icon" variant="ghost" onClick={() => setEditingStage(null)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                    <Droppable droppableId={stage.id} type="CARD">
-                      {(provided, snapshot) => (
-                        <div 
-                          {...provided.droppableProps} 
-                          ref={provided.innerRef}
-                          className={`min-h-[50px] ${snapshot.isDraggingOver ? 'bg-secondary/50' : ''}`}
-                        >
-                          {opportunities
-                            .filter((opp) => opp.stage_id === stage.id)
-                            .sort((a, b) => a.position - b.position)
-                            .map((opp, index) => (
-                              <Draggable key={opp.id} draggableId={opp.id} index={index}>
-                                {(provided, snapshot) => (
-                                  <Card
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    className={`mb-2 overflow-hidden ${snapshot.isDragging ? 'opacity-50' : ''}`}
-                                  >
-                                    <CardContent className="p-3 flex flex-col h-full">                        
-                                      <div className="flex flex-wrap justify-between items-start gap-2 flex-grow">
-                                        <h4 className="font-medium truncate mr-2">{opp.name}</h4>
-                                        <div className="flex flex-wrap gap-1">
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={() => onMoveLead(opp, 'backward')} 
-                                            disabled={index === 0 && stageIndex === 0}
-                                          >
-                                            <ChevronLeft className="h-4 w-4" />
-                                          </Button>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={() => onMoveLead(opp, 'forward')} 
-                                            disabled={index === opportunities.filter((o) => o.stage_id === stage.id).length - 1 && stageIndex === currentPipeline.stages.length - 1}
-                                          >
-                                            <ChevronRight className="h-4 w-4" />
-                                          </Button>
-                                          <Button variant="ghost" size="icon" onClick={() => setShowingLead(opp)}>
-                                            <Eye className="h-4 w-4" />
-                                          </Button>
-                                          <Button variant="ghost" size="icon" onClick={() => onEditLead(opp)}>
-                                            <Edit className="h-4 w-4" />
-                                          </Button>
-                                          <Button variant="ghost" size="icon" onClick={() => onDeleteLead(opp.id)}>
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                      <p className="text-sm text-muted-foreground">
-                                        ${opp.value.toLocaleString()}
-                                      </p>
-                                      <div className="flex justify-between items-center mt-2">
-                                        <Badge>{opp.priority}</Badge>
-                                        <span className="text-sm">{opp.probability}%</span>
-                                      </div>
-                                      <div className="text-xs text-muted-foreground mt-1">
-                                        Added: {opp.date_added}
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                )}
-                              </Draggable>
-                            ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  </div>
-                )}
-              </Draggable>
-            ))}
-            {provided.placeholder}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="min-w-[350px] bg-muted/50 rounded-lg p-4 space-y-4"
+    >
+      <div className="flex items-center justify-between" {...attributes} {...listeners}>
+        <div className="flex items-center space-x-2">
+          {isEditing ? (
+            <div className="flex items-center space-x-2">
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
+                className="h-8 text-sm"
+                autoFocus
+              />
+              <Button size="sm" onClick={handleSaveEdit} className="h-8 px-2">
+                ✓
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => {
+                  setIsEditing(false)
+                  setEditName(stage.name)
+                }} 
+                className="h-8 px-2"
+              >
+                ✕
+              </Button>
+            </div>
+          ) : (
+            <>
+              <h3 className="font-semibold text-lg cursor-grab">{stage.name}</h3>
+              <Badge variant="secondary" className="text-xs">
+                {stageOpportunities.length}
+              </Badge>
+            </>
+          )}
+        </div>
+        
+        {!isEditing && (
+          <div className="flex items-center space-x-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsEditing(true)}
+              className="h-8 w-8 p-0"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onDeleteStage(stage.id)}
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         )}
-      </Droppable>
+      </div>
 
-      {/* Stage Information Dialog */}
-      <Dialog open={!!showingStage} onOpenChange={() => setShowingStage(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Stage Information: {showingStage}</DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            <p><strong>Pipeline:</strong> {currentPipeline.name}</p>
-            <p><strong>Position:</strong> {currentPipeline.stages.findIndex(stage => stage.id === showingStage) + 1} of {currentPipeline.stages.length}</p>
-            <p><strong>Opportunities:</strong> {opportunities.filter(opp => opp.stage_id === showingStage).length}</p>
-            <p><strong>Total Value:</strong> ${opportunities.filter(opp => opp.stage_id === showingStage).reduce((sum, opp) => sum + opp.value, 0).toLocaleString()}</p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SortableContext
+        items={stageOpportunities.map(opp => opp.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-3 min-h-[200px]">
+          {stageOpportunities.map((opportunity) => (
+            <SortableOpportunity
+              key={opportunity.id}
+              opportunity={opportunity}
+              onMoveLead={onMoveLead}
+              onEditLead={onEditLead}
+              onDeleteLead={onDeleteLead}
+              onViewLead={setViewingLead}
+            />
+          ))}
+        </div>
+      </SortableContext>
 
-      {/* Lead Information Dialog */}
-      <Dialog open={!!showingLead} onOpenChange={() => setShowingLead(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Lead Information: {showingLead?.name}</DialogTitle>
-          </DialogHeader>
-          {showingLead && (
-            <div className="mt-4">
-              <p><strong>Value:</strong> ${showingLead.value.toLocaleString()}</p>
-              <p><strong>Stage:</strong> {currentPipeline.stages.find(stage => stage.id === showingLead.stage_id)?.name}</p>
-              <p><strong>Probability:</strong> {showingLead.probability}%</p>
-              <p><strong>Priority:</strong> {showingLead.priority}</p>
-              <p><strong>Pipeline:</strong> {currentPipeline.name}</p>
-              <p><strong>Date Added:</strong> {showingLead.date_added}</p>
+      {viewingLead && (
+        <Dialog open={!!viewingLead} onOpenChange={() => setViewingLead(null)}>
+          <DialogContent className="glass-effect border-0 shadow-xl">
+            <DialogHeader>
+              <DialogTitle className="text-heading-4">Lead Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <span className="font-medium">Name:</span> {viewingLead.name}
+              </div>
+              <div>
+                <span className="font-medium">Value:</span> ${viewingLead.value?.toLocaleString()}
+              </div>
+              <div>
+                <span className="font-medium">Probability:</span> {viewingLead.probability}%
+              </div>
+              <div>
+                <span className="font-medium">Priority:</span>
+                <Badge variant={viewingLead.priority === 'High' ? 'destructive' : viewingLead.priority === 'Medium' ? 'default' : 'secondary'} className="ml-2">
+                  {viewingLead.priority}
+                </Badge>
+              </div>
+              {viewingLead.company && (
+                <div>
+                  <span className="font-medium">Company:</span> {viewingLead.company}
+                </div>
+              )}
+              {viewingLead.contact_name && (
+                <div>
+                  <span className="font-medium">Contact:</span> {viewingLead.contact_name}
+                </div>
+              )}
+              {viewingLead.email && (
+                <div>
+                  <span className="font-medium">Email:</span> {viewingLead.email}
+                </div>
+              )}
+              {viewingLead.phone && (
+                <div>
+                  <span className="font-medium">Phone:</span> {viewingLead.phone}
+                </div>
+              )}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </DragDropContext>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
   )
 }
+
+// Sortable Opportunity Component
+function SortableOpportunity({ opportunity, onMoveLead, onEditLead, onDeleteLead, onViewLead }: {
+  opportunity: Opportunity
+  onMoveLead: (lead: Opportunity, direction: 'forward' | 'backward') => void
+  onEditLead: (lead: Opportunity) => void
+  onDeleteLead: (id: string) => void
+  onViewLead: (lead: Opportunity) => void
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: opportunity.id,
+    data: {
+      type: 'opportunity',
+      opportunity,
+    },
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'high':
+        return 'destructive'
+      case 'medium':
+        return 'default'
+      case 'low':
+        return 'secondary'
+      default:
+        return 'secondary'
+    }
+  }
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className="cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
+      {...attributes}
+      {...listeners}
+    >
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between">
+          <h4 className="font-medium text-sm line-clamp-2">{opportunity.name}</h4>
+          <div className="flex items-center space-x-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation()
+                onViewLead(opportunity)
+              }}
+              className="h-6 w-6 p-0"
+            >
+              <Eye className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEditLead(opportunity)
+              }}
+              className="h-6 w-6 p-0"
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDeleteLead(opportunity.id)
+              }}
+              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>${opportunity.value?.toLocaleString()}</span>
+          <span>{opportunity.probability}%</span>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <Badge variant={getPriorityColor(opportunity.priority)} className="text-xs">
+            {opportunity.priority}
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function KanbanBoard({ 
+  opportunities, 
+  currentPipeline, 
+  onDragEnd, 
+  onMoveStage, 
+  onEditStage, 
+  onDeleteStage, 
+  onMoveLead, 
+  onEditLead, 
+  onDeleteLead 
+}: KanbanBoardProps) {
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeData, setActiveData] = useState<any>(null)
+
+  // Configure sensors for drag detection
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        delay: 120, // allow click without starting drag
+        tolerance: 8,
+      },
+    }),
+  )
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id.toString())
+    setActiveData(event.active.data.current)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    
+    if (!over) {
+      setActiveId(null)
+      setActiveData(null)
+      return
+    }
+
+    // Pass the drag result to the parent component
+    onDragEnd({ active, over })
+    setActiveId(null)
+    setActiveData(null)
+  }
+
+  if (!currentPipeline) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">No pipeline selected</p>
+      </div>
+    )
+  }
+
+  const sortedStages = [...currentPipeline.stages].sort((a, b) => a.position - b.position)
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="overflow-x-auto">
+        <div className="flex space-x-6 min-h-[600px] pb-4">
+          <SortableContext
+            items={sortedStages.map(stage => stage.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            {sortedStages.map((stage) => (
+              <SortableStage
+                key={stage.id}
+                stage={stage}
+                opportunities={opportunities}
+                onEditStage={onEditStage}
+                onDeleteStage={onDeleteStage}
+                onMoveLead={onMoveLead}
+                onEditLead={onEditLead}
+                onDeleteLead={onDeleteLead}
+              />
+            ))}
+          </SortableContext>
+        </div>
+      </div>
+      <DragOverlay dropAnimation={null}>
+        {activeData?.type === 'opportunity' && (
+          <div className="rounded-md bg-card border shadow-lg p-3 w-[300px] pointer-events-none">
+            <div className="font-medium text-sm mb-1 line-clamp-2">{activeData.opportunity.name}</div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>${activeData.opportunity.value?.toLocaleString()}</span>
+              <span>{activeData.opportunity.probability}%</span>
+            </div>
+          </div>
+        )}
+        {activeData?.type === 'stage' && (
+          <div className="min-w-[350px] bg-muted/60 rounded-lg p-4 shadow-lg">
+            <h3 className="font-semibold text-lg line-clamp-1">{activeData.stage.name}</h3>
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
+  )
+}
+
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from '@/components/auth-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { Overview } from "@/components/overview"
 import { MessageStatsGroup } from "@/components/dashboard/message-stats"
 import { SalesStats } from "@/components/dashboard/sales-stats"
@@ -178,170 +179,230 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Avatar className="h-20 w-20 border-4 border-background">
-              <AvatarImage src={user?.user_metadata.avatar_url} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xl">
-                {user?.email?.[0].toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-background bg-green-500" />
+    <div className="flex-1 min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      {/* Hero Header Section */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-radial opacity-50"></div>
+        <div className="absolute top-10 right-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-bounce-gentle"></div>
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-bounce-gentle" style={{animationDelay: '1s'}}></div>
+        
+        <div className="relative z-10 p-8 pt-6">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
+            <div className="flex items-center space-x-6">
+              <div className="relative hover-lift">
+                <Avatar className="h-24 w-24 border-4 border-white dark:border-gray-800 shadow-xl">
+                  <AvatarImage src={user?.user_metadata.avatar_url} />
+                  <AvatarFallback className="bg-gradient-primary text-white text-2xl font-semibold">
+                    {user?.email?.[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute bottom-1 right-1 h-6 w-6 rounded-full border-4 border-white dark:border-gray-800 bg-green-500 shadow-lg animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-heading-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent font-bold">
+                  Welcome back, {user?.email?.split('@')[0]}
+                </h1>
+                <p className="text-body text-muted-foreground">
+                  Here's what's happening with your messaging and sales activities
+                </p>
+                <div className="flex items-center gap-2 text-caption text-primary">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
+                  ONLINE NOW
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 animate-slide-in-right">
+              <Button variant="ghost" size="icon" className="relative glass-effect rounded-full hover-lift">
+                <Bell className="h-5 w-5" />
+                <span className="absolute right-1 top-1 h-3 w-3 rounded-full bg-red-500 border-2 border-white animate-pulse" />
+              </Button>
+              <Button variant="ghost" size="icon" className="glass-effect rounded-full hover-lift">
+                <Calendar className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="glass-effect rounded-full hover-lift">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user?.email?.split('@')[0]}</h1>
-            <p className="text-muted-foreground">
-              Here's what's happening with your messaging and sales activities
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="relative rounded-full bg-background p-2 hover:bg-accent">
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-          </button>
-          <button className="rounded-full bg-background p-2 hover:bg-accent">
-            <Calendar className="h-5 w-5" />
-          </button>
-          <button className="rounded-full bg-background p-2 hover:bg-accent">
-            <Settings className="h-5 w-5" />
-          </button>
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-background">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
+      {/* Main Content */}
+      <div className="px-8 pb-8 space-y-8">
+        <Tabs defaultValue="overview" className="space-y-8">
+          <TabsList className="glass-effect border-0 shadow-lg hover-lift">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300">
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300">
+              Reports
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-white">Total Messages</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-white">{messageStats.whatsapp.total + messageStats.email.total + messageStats.sms.total}</div>
-                <p className="text-blue-100">+20.1% from last month</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-white">Delivery Rate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-white">98.7%</div>
-                <p className="text-purple-100">+2.4% from last month</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-white">Read Rate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-white">76.2%</div>
-                <p className="text-green-100">+5.2% from last month</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-white">Response Rate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-white">12.5%</div>
-                <p className="text-orange-100">+1.2% from last month</p>
-              </CardContent>
-            </Card>
-          </div>
+          <TabsContent value="overview" className="space-y-8 animate-fade-in">
+            {/* Stats Cards */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-slide-up">
+              <Card className="card-elevated hover-lift bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                    Total Messages
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-blue-900 dark:text-blue-100 mb-2">
+                    {messageStats.whatsapp.total + messageStats.email.total + messageStats.sms.total}
+                  </div>
+                  <p className="text-blue-700 dark:text-blue-300 text-sm font-medium">+20.1% from last month</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="card-elevated hover-lift bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                    Delivery Rate
+                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-purple-900 dark:text-purple-100 mb-2">98.7%</div>
+                  <p className="text-purple-700 dark:text-purple-300 text-sm font-medium">+2.4% from last month</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="card-elevated hover-lift bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-green-900 dark:text-green-100 flex items-center gap-2">
+                    Read Rate
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-green-900 dark:text-green-100 mb-2">76.2%</div>
+                  <p className="text-green-700 dark:text-green-300 text-sm font-medium">+5.2% from last month</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="card-elevated hover-lift bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-orange-900 dark:text-orange-100 flex items-center gap-2">
+                    Response Rate
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-orange-900 dark:text-orange-100 mb-2">12.5%</div>
+                  <p className="text-orange-700 dark:text-orange-300 text-sm font-medium">+1.2% from last month</p>
+                </CardContent>
+              </Card>
+            </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="md:col-span-4">
-              <CardHeader>
-                <CardTitle>Message Activity</CardTitle>
-                <CardDescription>
-                  Message delivery and engagement over time
+            {/* Charts Section */}
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-7 animate-slide-in-left">
+              <Card className="card-elevated hover-lift md:col-span-4 glass-effect border-0 shadow-xl">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-heading-4">Message Activity</CardTitle>
+                  <CardDescription className="text-body-small">
+                    Message delivery and engagement over time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <Overview />
+                </CardContent>
+              </Card>
+
+              <Card className="card-elevated hover-lift md:col-span-3 glass-effect border-0 shadow-xl">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-heading-4">Sales Overview</CardTitle>
+                  <CardDescription className="text-body-small">
+                    Your sales pipeline metrics
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <SalesStats stats={salesStats} />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Bottom Section */}
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 animate-slide-in-right">
+              <Card className="card-elevated hover-lift md:col-span-2 glass-effect border-0 shadow-xl">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-heading-4">Message Stats by Channel</CardTitle>
+                  <CardDescription className="text-body-small">
+                    Detailed breakdown of message performance
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <MessageStatsGroup
+                    whatsapp={messageStats.whatsapp}
+                    email={messageStats.email}
+                    sms={messageStats.sms}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="card-elevated hover-lift md:col-span-1 glass-effect border-0 shadow-xl">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-heading-4">Quick Notes</CardTitle>
+                  <CardDescription className="text-body-small">
+                    Your recent notes and reminders
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <Notes
+                    notes={notes}
+                    onAddNote={handleAddNote}
+                    onEditNote={handleEditNote}
+                    onDeleteNote={handleDeleteNote}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6 animate-fade-in">
+            <Card className="card-elevated glass-effect border-0 shadow-xl">
+              <CardHeader className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center">
+                  <Calendar className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-heading-3">Analytics Dashboard</CardTitle>
+                <CardDescription className="text-body max-w-md mx-auto">
+                  Comprehensive analytics and insights for your messaging campaigns will be displayed here. Get detailed metrics and performance data.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <Overview />
+              <CardContent className="text-center py-12">
+                <div className="bg-gradient-to-br from-muted/50 to-muted rounded-xl p-12">
+                  <p className="text-muted-foreground">Coming Soon - Advanced Analytics</p>
+                </div>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card className="md:col-span-3">
-              <CardHeader>
-                <CardTitle>Sales Overview</CardTitle>
-                <CardDescription>
-                  Your sales pipeline metrics
+          <TabsContent value="reports" className="space-y-6 animate-fade-in">
+            <Card className="card-elevated glass-effect border-0 shadow-xl">
+              <CardHeader className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center">
+                  <Settings className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-heading-3">Reports Center</CardTitle>
+                <CardDescription className="text-body max-w-md mx-auto">
+                  Generate and download detailed reports for your campaigns, messages, and customer interactions.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <SalesStats stats={salesStats} />
+              <CardContent className="text-center py-12">
+                <div className="bg-gradient-to-br from-muted/50 to-muted rounded-xl p-12">
+                  <p className="text-muted-foreground">Coming Soon - Advanced Reports</p>
+                </div>
               </CardContent>
             </Card>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Message Stats by Channel</CardTitle>
-                <CardDescription>
-                  Detailed breakdown of message performance
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <MessageStatsGroup
-                  whatsapp={messageStats.whatsapp}
-                  email={messageStats.email}
-                  sms={messageStats.sms}
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="md:col-span-1">
-              <CardHeader>
-                <CardTitle>Quick Notes</CardTitle>
-                <CardDescription>
-                  Your recent notes and reminders
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Notes
-                  notes={notes}
-                  onAddNote={handleAddNote}
-                  onEditNote={handleEditNote}
-                  onDeleteNote={handleDeleteNote}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Analytics Content</CardTitle>
-              <CardDescription>
-                Detailed analytics will be shown here
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="reports" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Reports Content</CardTitle>
-              <CardDescription>
-                Detailed reports will be shown here
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }

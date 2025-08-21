@@ -425,60 +425,89 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-full overflow-hidden">
-      <h1 className="text-2xl font-bold mb-4">Project Management</h1>
-      <div className="flex justify-between items-center mb-4">
-        <Select value={currentPipeline?.id} onValueChange={(value) => setCurrentPipeline(pipelines.find(p => p.id === value))}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Select pipeline" />
-          </SelectTrigger>
-          <SelectContent>
-            {pipelines.map((pipeline) => (
-              <SelectItem key={pipeline.id} value={pipeline.id}>{pipeline.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Dialog open={isAddPipelineDialogOpen} onOpenChange={setIsAddPipelineDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Pipeline
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Pipeline</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Name</Label>
-                <Input
-                  id="name"
-                  value={newPipelineName}
-                  onChange={(e) => setNewPipelineName(e.target.value)}
-                  className="col-span-3"
-                />
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      {/* Hero Header Section */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-radial opacity-30"></div>
+        <div className="absolute top-10 right-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-bounce-gentle"></div>
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-bounce-gentle" style={{animationDelay: '1s'}}></div>
+        
+        <div className="relative z-10 p-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
+            <div className="space-y-3">
+              <h1 className="text-heading-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent font-bold">
+                Project Management
+              </h1>
+              <p className="text-body text-muted-foreground">
+                Organize and track your projects with customizable pipelines
+              </p>
+              <div className="flex items-center gap-2 text-caption text-primary">
+                <PlusCircle className="w-4 h-4" />
+                {filteredProjects.length} PROJECTS
               </div>
             </div>
-            <DialogFooter>
-              <Button onClick={handleAddPipeline}>Add Pipeline</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <div className="flex items-center gap-4">
+              <Select value={currentPipeline?.id} onValueChange={(value) => setCurrentPipeline(pipelines.find(p => p.id === value))}>
+                <SelectTrigger className="glass-effect border-0 shadow-lg hover-lift min-w-[200px]">
+                  <SelectValue placeholder="Select pipeline" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pipelines.map((pipeline) => (
+                    <SelectItem key={pipeline.id} value={pipeline.id}>{pipeline.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Dialog open={isAddPipelineDialogOpen} onOpenChange={setIsAddPipelineDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="glass-effect border-0 shadow-lg hover-lift">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Pipeline
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="glass-effect border-0 shadow-xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-heading-4">Add New Pipeline</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Pipeline Name</Label>
+                      <Input
+                        id="name"
+                        value={newPipelineName}
+                        onChange={(e) => setNewPipelineName(e.target.value)}
+                        placeholder="Enter pipeline name"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleAddPipeline} className="btn-primary">Add Pipeline</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </div>
       </div>
-      <Card className="overflow-hidden">
-        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            Project Board
-          </CardTitle>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Stage
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
+
+      {/* Main Content */}
+      <div className="px-8 pb-8">
+        <Card className="card-elevated glass-effect border-0 shadow-xl animate-fade-in">
+          <CardHeader className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <CardTitle className="text-heading-4 flex items-center gap-2">
+                Project Board
+                <span className="text-sm font-normal text-muted-foreground">
+                  ({filteredProjects.length} projects)
+                </span>
+              </CardTitle>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="glass-effect border-0 shadow-md hover-lift">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Stage
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="glass-effect border-0 shadow-xl">{" "}
               <DialogHeader>
                 <DialogTitle>Add New Stage</DialogTitle>
               </DialogHeader>
