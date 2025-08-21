@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { DatabaseStatus } from "@/components/database-status"
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -26,9 +28,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold mb-6">Settings</h1>
+    <div className="container mx-auto p-8 space-y-8">
+      <h1 className="text-3xl font-bold">Settings</h1>
+      
+      {/* Database Management Section */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Database Management</h2>
+        <DatabaseStatus />
+      </div>
+
+      <Separator />
+
+      {/* Application Settings */}
       <div className="space-y-6">
+        <h2 className="text-xl font-semibold">Application Settings</h2>
+        
         <div>
           <Label htmlFor="senderName">Sender Name</Label>
           <Input
@@ -37,6 +51,7 @@ export default function SettingsPage() {
             onChange={(e) => handleChange("senderName", e.target.value)}
           />
         </div>
+        
         <div>
           <Label htmlFor="language">Default Language</Label>
           <Select
@@ -53,6 +68,7 @@ export default function SettingsPage() {
             </SelectContent>
           </Select>
         </div>
+        
         <div className="flex items-center space-x-2">
           <Switch
             id="notifications"
@@ -61,6 +77,7 @@ export default function SettingsPage() {
           />
           <Label htmlFor="notifications">Enable Notifications</Label>
         </div>
+        
         <div className="flex items-center space-x-2">
           <Switch
             id="twoFactor"
@@ -69,6 +86,7 @@ export default function SettingsPage() {
           />
           <Label htmlFor="twoFactor">Enable Two-Factor Authentication</Label>
         </div>
+        
         <Button>Save Settings</Button>
       </div>
     </div>

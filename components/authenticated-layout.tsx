@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { useAuth } from './auth-provider'
 import { AppSidebar } from "@/components/sidebar"
 import { UserNav } from "@/components/user-nav"
@@ -14,8 +14,17 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter, usePathname } from 'next/navigation'
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Suspense } from 'react'
+import { useDatabaseInit } from '@/hooks/use-database-init'
 
-const publicRoutes = ['/', '/login', '/signup', '/pricing']
+// Exact public routes (no auth required)
+const publicRoutes = ['/', '/login', '/signup', '/pricing', '/contact', '/about', '/features', '/security', '/privacy', '/terms']
+// Public route prefixes (any path starting with these stays public – future friendly)
+const publicRoutePrefixes = ['/pricing', '/contact', '/about', '/features', '/security', '/privacy', '/terms']
+
+function isPublicPath(path: string) {
+  if (publicRoutes.includes(path)) return true
+  return publicRoutePrefixes.some(prefix => path.startsWith(prefix))
+}
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -65,12 +74,51 @@ const getTabsForPath = (path: string) => {
 }
 
 export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const publicAllowed = isPublicPath(pathname)
+
+  // Show loading during auth initialization
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="mt-4 text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Handle authentication redirects after loading is complete
+  React.useEffect(() => {
+    if (!loading) {
+      if (!user && !publicAllowed) {
+        router.replace('/login')
+      } else if (user && (pathname === '/login' || pathname === '/signup')) {
+        router.replace('/dashboard')
+      }
+    }
+  }, [user, loading, publicAllowed, pathname, router])
+
+  // If route is public, just render it (even if user logged in we allow marketing pages)
+  if (publicAllowed) return <>{children}</>
+
+  // While deciding redirect (no user) show nothing to avoid flash
+  if (!user) return null
+
+  // Protected shell (contains heavy hooks)
+  return <ProtectedShell pathname={pathname}>{children}</ProtectedShell>
+}
+
+function ProtectedShell({ children, pathname }: { children: React.ReactNode, pathname: string }) {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState(navItems)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const router = useRouter()
-  const pathname = usePathname()
+  const { isReady: dbReady, isLoading: dbLoading, error: dbError } = useDatabaseInit()
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query)
@@ -86,8 +134,28 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
     }
   }, [])
 
-  if (!user) {
-    return <>{children}</>
+  // DB init states
+  if (dbLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="mt-4 text-sm text-muted-foreground">Initializing database...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (dbError) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center max-w-md">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">Database Initialization Error</h2>
+          <p className="text-sm text-muted-foreground mb-4">{dbError}</p>
+          <p className="text-xs text-muted-foreground">Please check the browser console for the SQL commands to run in your Supabase SQL editor.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -123,11 +191,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
                 >
                   <TabsList className="w-full">
                     {getTabsForPath(pathname)?.tabs.map((tab) => (
-                      <TabsTrigger
-                        key={tab.value}
-                        value={tab.value}
-                        className="flex-1"
-                      >
+                      <TabsTrigger key={tab.value} value={tab.value} className="flex-1">
                         {tab.label}
                       </TabsTrigger>
                     ))}
@@ -146,9 +210,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-black relative">
-            <Suspense fallback={<LoadingSpinner />}>
-              {children}
-            </Suspense>
+            <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>
           </main>
         </div>
       </div>
