@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -8,81 +8,89 @@ import {
   useSensor,
   useSensors,
   closestCorners,
-} from '@dnd-kit/core'
+} from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
   horizontalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Edit, Trash2, ChevronLeft, ChevronRight, X, Eye } from 'lucide-react'
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Edit, Trash2, ChevronLeft, ChevronRight, X, Eye } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 interface Opportunity {
-  id: string
-  name: string
-  company?: string
-  contact_name?: string
-  email?: string
-  phone?: string
-  value: number
-  stage_id: string
-  probability: number
-  priority: string
-  position: number
-  close_date?: string
-  notes?: string
-  created_at?: string
-  updated_at?: string
+  id: string;
+  name: string;
+  company?: string;
+  contact_name?: string;
+  email?: string;
+  phone?: string;
+  value: number;
+  stage_id: string;
+  probability: number;
+  priority: string;
+  position: number;
+  close_date?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface Pipeline {
-  id: string
-  name: string
-  stages: Stage[]
+  id: string;
+  name: string;
+  stages: Stage[];
 }
 
 interface Stage {
-  id: string
-  name: string
-  position: number
+  id: string;
+  name: string;
+  position: number;
 }
 
 interface KanbanBoardProps {
-  opportunities: Opportunity[]
-  currentPipeline: Pipeline | null
-  onDragEnd: (result: { active: any; over: any }) => void
-  onMoveStage: (stageId: string, direction: 'forward' | 'backward') => void
-  onEditStage: (oldStageId: string, newStageName: string) => void
-  onDeleteStage: (stageId: string) => void
-  onMoveLead: (lead: Opportunity, direction: 'forward' | 'backward') => void
-  onEditLead: (lead: Opportunity) => void
-  onDeleteLead: (id: string) => void
+  opportunities: Opportunity[];
+  currentPipeline: Pipeline | null;
+  onDragEnd: (result: { active: any; over: any }) => void;
+  onMoveStage: (stageId: string, direction: "forward" | "backward") => void;
+  onEditStage: (oldStageId: string, newStageName: string) => void;
+  onDeleteStage: (stageId: string) => void;
+  onMoveLead: (lead: Opportunity, direction: "forward" | "backward") => void;
+  onEditLead: (lead: Opportunity) => void;
+  onDeleteLead: (id: string) => void;
 }
 
 // Sortable Stage Component
-function SortableStage({ stage, opportunities, onEditStage, onDeleteStage, onMoveLead, onEditLead, onDeleteLead }: {
-  stage: Stage
-  opportunities: Opportunity[]
-  onEditStage: (stageId: string, newName: string) => void
-  onDeleteStage: (stageId: string) => void
-  onMoveLead: (lead: Opportunity, direction: 'forward' | 'backward') => void
-  onEditLead: (lead: Opportunity) => void
-  onDeleteLead: (id: string) => void
+function SortableStage({
+  stage,
+  opportunities,
+  onEditStage,
+  onDeleteStage,
+  onMoveLead,
+  onEditLead,
+  onDeleteLead,
+}: {
+  stage: Stage;
+  opportunities: Opportunity[];
+  onEditStage: (stageId: string, newName: string) => void;
+  onDeleteStage: (stageId: string) => void;
+  onMoveLead: (lead: Opportunity, direction: "forward" | "backward") => void;
+  onEditLead: (lead: Opportunity) => void;
+  onDeleteLead: (id: string) => void;
 }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editName, setEditName] = useState(stage.name)
-  const [viewingLead, setViewingLead] = useState<Opportunity | null>(null)
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(stage.name);
+  const [viewingLead, setViewingLead] = useState<Opportunity | null>(null);
 
   const {
     attributes,
@@ -94,26 +102,27 @@ function SortableStage({ stage, opportunities, onEditStage, onDeleteStage, onMov
   } = useSortable({
     id: stage.id,
     data: {
-      type: 'stage',
+      type: "stage",
       stage,
     },
-  })
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  }
+  };
 
-  const stageOpportunities = opportunities.filter(opp => opp.stage_id === stage.id)
-    .sort((a, b) => (a.position || 0) - (b.position || 0))
+  const stageOpportunities = opportunities
+    .filter((opp) => opp.stage_id === stage.id)
+    .sort((a, b) => (a.position || 0) - (b.position || 0));
 
   const handleSaveEdit = () => {
     if (editName.trim() && editName !== stage.name) {
-      onEditStage(stage.id, editName.trim())
+      onEditStage(stage.id, editName.trim());
     }
-    setIsEditing(false)
-  }
+    setIsEditing(false);
+  };
 
   return (
     <div
@@ -121,27 +130,31 @@ function SortableStage({ stage, opportunities, onEditStage, onDeleteStage, onMov
       style={style}
       className="min-w-[350px] bg-muted/50 rounded-lg p-4 space-y-4"
     >
-      <div className="flex items-center justify-between" {...attributes} {...listeners}>
+      <div
+        className="flex items-center justify-between"
+        {...attributes}
+        {...listeners}
+      >
         <div className="flex items-center space-x-2">
           {isEditing ? (
             <div className="flex items-center space-x-2">
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
+                onKeyPress={(e) => e.key === "Enter" && handleSaveEdit()}
                 className="h-8 text-sm"
                 autoFocus
               />
               <Button size="sm" onClick={handleSaveEdit} className="h-8 px-2">
                 ✓
               </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
+              <Button
+                size="sm"
+                variant="ghost"
                 onClick={() => {
-                  setIsEditing(false)
-                  setEditName(stage.name)
-                }} 
+                  setIsEditing(false);
+                  setEditName(stage.name);
+                }}
                 className="h-8 px-2"
               >
                 ✕
@@ -149,14 +162,16 @@ function SortableStage({ stage, opportunities, onEditStage, onDeleteStage, onMov
             </div>
           ) : (
             <>
-              <h3 className="font-semibold text-lg cursor-grab">{stage.name}</h3>
+              <h3 className="font-semibold text-lg cursor-grab">
+                {stage.name}
+              </h3>
               <Badge variant="secondary" className="text-xs">
                 {stageOpportunities.length}
               </Badge>
             </>
           )}
         </div>
-        
+
         {!isEditing && (
           <div className="flex items-center space-x-1">
             <Button
@@ -180,7 +195,7 @@ function SortableStage({ stage, opportunities, onEditStage, onDeleteStage, onMov
       </div>
 
       <SortableContext
-        items={stageOpportunities.map(opp => opp.id)}
+        items={stageOpportunities.map((opp) => opp.id)}
         strategy={verticalListSortingStrategy}
       >
         <div className="space-y-3 min-h-[200px]">
@@ -208,35 +223,50 @@ function SortableStage({ stage, opportunities, onEditStage, onDeleteStage, onMov
                 <span className="font-medium">Name:</span> {viewingLead.name}
               </div>
               <div>
-                <span className="font-medium">Value:</span> ${viewingLead.value?.toLocaleString()}
+                <span className="font-medium">Value:</span> $
+                {viewingLead.value?.toLocaleString()}
               </div>
               <div>
-                <span className="font-medium">Probability:</span> {viewingLead.probability}%
+                <span className="font-medium">Probability:</span>{" "}
+                {viewingLead.probability}%
               </div>
               <div>
                 <span className="font-medium">Priority:</span>
-                <Badge variant={viewingLead.priority === 'High' ? 'destructive' : viewingLead.priority === 'Medium' ? 'default' : 'secondary'} className="ml-2">
+                <Badge
+                  variant={
+                    viewingLead.priority === "High"
+                      ? "destructive"
+                      : viewingLead.priority === "Medium"
+                      ? "default"
+                      : "secondary"
+                  }
+                  className="ml-2"
+                >
                   {viewingLead.priority}
                 </Badge>
               </div>
               {viewingLead.company && (
                 <div>
-                  <span className="font-medium">Company:</span> {viewingLead.company}
+                  <span className="font-medium">Company:</span>{" "}
+                  {viewingLead.company}
                 </div>
               )}
               {viewingLead.contact_name && (
                 <div>
-                  <span className="font-medium">Contact:</span> {viewingLead.contact_name}
+                  <span className="font-medium">Contact:</span>{" "}
+                  {viewingLead.contact_name}
                 </div>
               )}
               {viewingLead.email && (
                 <div>
-                  <span className="font-medium">Email:</span> {viewingLead.email}
+                  <span className="font-medium">Email:</span>{" "}
+                  {viewingLead.email}
                 </div>
               )}
               {viewingLead.phone && (
                 <div>
-                  <span className="font-medium">Phone:</span> {viewingLead.phone}
+                  <span className="font-medium">Phone:</span>{" "}
+                  {viewingLead.phone}
                 </div>
               )}
             </div>
@@ -244,16 +274,22 @@ function SortableStage({ stage, opportunities, onEditStage, onDeleteStage, onMov
         </Dialog>
       )}
     </div>
-  )
+  );
 }
 
 // Sortable Opportunity Component
-function SortableOpportunity({ opportunity, onMoveLead, onEditLead, onDeleteLead, onViewLead }: {
-  opportunity: Opportunity
-  onMoveLead: (lead: Opportunity, direction: 'forward' | 'backward') => void
-  onEditLead: (lead: Opportunity) => void
-  onDeleteLead: (id: string) => void
-  onViewLead: (lead: Opportunity) => void
+function SortableOpportunity({
+  opportunity,
+  onMoveLead,
+  onEditLead,
+  onDeleteLead,
+  onViewLead,
+}: {
+  opportunity: Opportunity;
+  onMoveLead: (lead: Opportunity, direction: "forward" | "backward") => void;
+  onEditLead: (lead: Opportunity) => void;
+  onDeleteLead: (id: string) => void;
+  onViewLead: (lead: Opportunity) => void;
 }) {
   const {
     attributes,
@@ -265,29 +301,29 @@ function SortableOpportunity({ opportunity, onMoveLead, onEditLead, onDeleteLead
   } = useSortable({
     id: opportunity.id,
     data: {
-      type: 'opportunity',
+      type: "opportunity",
       opportunity,
     },
-  })
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  }
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority?.toLowerCase()) {
-      case 'high':
-        return 'destructive'
-      case 'medium':
-        return 'default'
-      case 'low':
-        return 'secondary'
+      case "high":
+        return "destructive";
+      case "medium":
+        return "default";
+      case "low":
+        return "secondary";
       default:
-        return 'secondary'
+        return "secondary";
     }
-  }
+  };
 
   return (
     <Card
@@ -299,14 +335,16 @@ function SortableOpportunity({ opportunity, onMoveLead, onEditLead, onDeleteLead
     >
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between">
-          <h4 className="font-medium text-sm line-clamp-2">{opportunity.name}</h4>
+          <h4 className="font-medium text-sm line-clamp-2">
+            {opportunity.name}
+          </h4>
           <div className="flex items-center space-x-1">
             <Button
               size="sm"
               variant="ghost"
               onClick={(e) => {
-                e.stopPropagation()
-                onViewLead(opportunity)
+                e.stopPropagation();
+                onViewLead(opportunity);
               }}
               className="h-6 w-6 p-0"
             >
@@ -316,8 +354,8 @@ function SortableOpportunity({ opportunity, onMoveLead, onEditLead, onDeleteLead
               size="sm"
               variant="ghost"
               onClick={(e) => {
-                e.stopPropagation()
-                onEditLead(opportunity)
+                e.stopPropagation();
+                onEditLead(opportunity);
               }}
               className="h-6 w-6 p-0"
             >
@@ -327,8 +365,8 @@ function SortableOpportunity({ opportunity, onMoveLead, onEditLead, onDeleteLead
               size="sm"
               variant="ghost"
               onClick={(e) => {
-                e.stopPropagation()
-                onDeleteLead(opportunity.id)
+                e.stopPropagation();
+                onDeleteLead(opportunity.id);
               }}
               className="h-6 w-6 p-0 text-destructive hover:text-destructive"
             >
@@ -336,34 +374,37 @@ function SortableOpportunity({ opportunity, onMoveLead, onEditLead, onDeleteLead
             </Button>
           </div>
         </div>
-        
+
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>${opportunity.value?.toLocaleString()}</span>
           <span>{opportunity.probability}%</span>
         </div>
-        
+
         <div className="flex items-center justify-between">
-          <Badge variant={getPriorityColor(opportunity.priority)} className="text-xs">
+          <Badge
+            variant={getPriorityColor(opportunity.priority)}
+            className="text-xs"
+          >
             {opportunity.priority}
           </Badge>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
-export function KanbanBoard({ 
-  opportunities, 
-  currentPipeline, 
-  onDragEnd, 
-  onMoveStage, 
-  onEditStage, 
-  onDeleteStage, 
-  onMoveLead, 
-  onEditLead, 
-  onDeleteLead 
+export function KanbanBoard({
+  opportunities,
+  currentPipeline,
+  onDragEnd,
+  onMoveStage,
+  onEditStage,
+  onDeleteStage,
+  onMoveLead,
+  onEditLead,
+  onDeleteLead,
 }: KanbanBoardProps) {
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // Configure sensors for drag detection
   const sensors = useSensors(
@@ -372,34 +413,36 @@ export function KanbanBoard({
         distance: 8, // 8px of movement required to start drag
       },
     })
-  )
+  );
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id.toString())
-  }
+    setActiveId(event.active.id.toString());
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    
+    const { active, over } = event;
+
     if (!over) {
-      setActiveId(null)
-      return
+      setActiveId(null);
+      return;
     }
 
     // Pass the drag result to the parent component
-    onDragEnd({ active, over })
-    setActiveId(null)
-  }
+    onDragEnd({ active, over });
+    setActiveId(null);
+  };
 
   if (!currentPipeline) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">No pipeline selected</p>
       </div>
-    )
+    );
   }
 
-  const sortedStages = [...currentPipeline.stages].sort((a, b) => a.position - b.position)
+  const sortedStages = [...currentPipeline.stages].sort(
+    (a, b) => a.position - b.position
+  );
 
   return (
     <DndContext
@@ -411,7 +454,7 @@ export function KanbanBoard({
       <div className="overflow-x-auto">
         <div className="flex space-x-6 min-h-[600px] pb-4">
           <SortableContext
-            items={sortedStages.map(stage => stage.id)}
+            items={sortedStages.map((stage) => stage.id)}
             strategy={horizontalListSortingStrategy}
           >
             {sortedStages.map((stage) => (
@@ -430,6 +473,5 @@ export function KanbanBoard({
         </div>
       </div>
     </DndContext>
-  )
+  );
 }
-
