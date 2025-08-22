@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from '@/components/auth-provider'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -35,6 +36,26 @@ const initialMessages = [
 
 export default function SMSInboxPage() {
   const [messages, setMessages] = useState(initialMessages)
+  const { session } = useAuth()
+  useEffect(() => {
+    if (!session) return
+    const load = async () => {
+      const res = await fetch('/api/messages?channel=sms', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      const data = await res.json()
+      if (data.messages) {
+        setMessages(data.messages.map((m: any, idx: number) => ({
+          id: idx + 1000,
+          contact: m.to || m.from || 'Unknown',
+          phone: m.to || m.from || '',
+          message: m.body_text || '',
+          timestamp: new Date(m.created_at).toLocaleTimeString(),
+          status: m.status === 'received' ? 'received' : 'delivered',
+          type: m.direction,
+        })))
+      }
+    }
+    load()
+  }, [session])
   const [selectedMessage, setSelectedMessage] = useState<typeof initialMessages[0] | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [currentTab, setCurrentTab] = useState("all")

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from '@/components/auth-provider'
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -42,9 +43,15 @@ export default function ComposeSMSPage() {
     }
   }
 
-  const handleSend = () => {
-    // Implement send logic here
-    console.log("Sending SMS:", sms)
+  const { session } = useAuth()
+  const handleSend = async () => {
+    const res = await fetch('/api/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ channel: 'sms', to: sms.to, content: sms.content, schedule_at: sms.scheduledTime || null })
+    })
+    const data = await res.json()
+    console.log('Send result', data)
   }
 
   const messageCount = Math.ceil(sms.content.length / MAX_SMS_LENGTH)

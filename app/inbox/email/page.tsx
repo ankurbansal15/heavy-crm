@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from '@/components/auth-provider'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -41,6 +42,29 @@ const initialEmails = [
 
 export default function EmailInboxPage() {
   const [emails, setEmails] = useState(initialEmails)
+  const { session } = useAuth()
+  useEffect(() => {
+    if (!session) return
+    const load = async () => {
+      const res = await fetch('/api/messages?channel=email', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      const data = await res.json()
+      if (data.messages) {
+        setEmails(data.messages.map((m: any, idx: number) => ({
+          id: idx + 1000,
+          from: m.from || 'Unknown',
+          email: m.from || 'unknown@example.com',
+          subject: m.subject || '(no subject)',
+          preview: m.body_text?.slice(0,120) || '',
+          timestamp: new Date(m.created_at).toLocaleString(),
+          read: true,
+          starred: false,
+          folder: 'inbox',
+          hasAttachments: false,
+        })))
+      }
+    }
+    load()
+  }, [session])
   const [selectedEmail, setSelectedEmail] = useState<typeof initialEmails[0] | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [currentFolder, setCurrentFolder] = useState("inbox")

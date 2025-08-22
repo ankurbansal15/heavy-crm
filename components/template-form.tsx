@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,59 +19,53 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-interface TemplateProps {
-  id: string;
-  name: string;
-  category: string;
-  language: string;
-  header_type: "media" | "text";
-  header_media: File | null;
-  body_text: string;
-}
+export function TemplateForm() {
+  const [name, setName] = useState("")
+  const [category, setCategory] = useState("MARKETING")
+  const [language, setLanguage] = useState("en_US")
+  const [headerEnabled, setHeaderEnabled] = useState(false)
+  const [headerText, setHeaderText] = useState("")
+  const [body, setBody] = useState("Hello {{1}}, your order #{{2}} has been confirmed and will be delivered on {{3}}.")
+  const [footer, setFooter] = useState("")
+  const [sampleValues, setSampleValues] = useState<string[]>(["John","12345","Monday"])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string|null>(null)
+  const [success, setSuccess] = useState<string|null>(null)
 
-interface TemplateFormProps {
-  onSubmit: (template: TemplateProps) => void;
-  initialTemplate?: TemplateProps | null;
-}
+  const placeholders = Array.from(new Set([...body.matchAll(/\{\{(\d+)\}\}/g)].map(m => Number(m[1])))).sort((a,b)=>a-b)
+  while (sampleValues.length < placeholders.length) sampleValues.push("")
+  const previewBody = body.replace(/\{\{(\d+)\}\}/g,(m,n)=>{ const idx=Number(n)-1; return sampleValues[idx]||m })
 
-export function TemplateForm({ onSubmit, initialTemplate }: TemplateFormProps) {
-  const [template, setTemplate] = useState<TemplateProps>(
-    initialTemplate || {
-      id: '',
-      name: "",
-      category: "",
-      language: "",
-      header_type: "text",
-      header_media: null,
-      body_text: "Hello {{1}}, your order #{{2}} has been confirmed and will be delivered on {{3}}.",
-    }
-  );
-
-  const [variables, setVariables] = useState({
-    "1": "John",
-    "2": "12345",
-    "3": "Monday",
-  });
-
-  const replaceVariables = (text: string) => {
-    return text.replace(/\{\{(\d+)\}\}/g, (match, number) => {
-      return variables[String(number) as keyof typeof variables] || match;
-    });
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setTemplate({ ...template, header_media: e.target.files[0] });
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(template);
-  };
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true); setError(null); setSuccess(null)
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const token = (await supabase.auth.getSession()).data.session?.access_token
+      const res = await fetch('/api/whatsapp/templates/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: name.trim(),
+          category,
+          language,
+          header_type: headerEnabled ? 'text' : 'none',
+          header_text: headerEnabled ? headerText : undefined,
+          body_text: body,
+          footer_text: footer || undefined,
+          samples: placeholders.map((p,i)=> sampleValues[i] || `Sample ${p}`)
+        })
+      })
+      const json = await res.json()
+      if (!res.ok) setError(json.error || 'Creation failed')
+      else setSuccess('Submitted for approval')
+    } catch (e:any) {
+      setError(e.message)
+    } finally { setSubmitting(false) }
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+  <form onSubmit={submit} className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Form Section */}
         <div className="space-y-6">
@@ -81,14 +74,8 @@ export function TemplateForm({ onSubmit, initialTemplate }: TemplateFormProps) {
               <label htmlFor="templateName" className="text-sm font-medium mb-1 block">
                 Template name
               </label>
-              <Input
-                id="templateName"
-                placeholder="new_template"
-                value={template.name}
-                onChange={(e) =>
-                  setTemplate({ ...template, name: e.target.value })
-                }
-              />
+        <Input id="templateName" placeholder="order_update" value={name} onChange={e=>setName(e.target.value)} />
+        <p className="text-xs text-muted-foreground mt-1">Lowercase letters, digits, underscore. No spaces.</p>
             </div>
 
             {/* Category and Language */}
@@ -97,19 +84,14 @@ export function TemplateForm({ onSubmit, initialTemplate }: TemplateFormProps) {
                 <label htmlFor="category" className="text-sm font-medium mb-1 block">
                   Select category
                 </label>
-                <Select
-                  value={template.category}
-                  onValueChange={(value) =>
-                    setTemplate({ ...template, category: value })
-                  }
-                >
+        <Select value={category} onValueChange={v=>setCategory(v.toUpperCase())}>
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Alert/Update" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="alert">Alert</SelectItem>
-                    <SelectItem value="update">Update</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
+          <SelectItem value="MARKETING">Marketing</SelectItem>
+          <SelectItem value="UTILITY">Utility</SelectItem>
+          <SelectItem value="AUTHENTICATION">Authentication</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -118,77 +100,49 @@ export function TemplateForm({ onSubmit, initialTemplate }: TemplateFormProps) {
                 <label htmlFor="language" className="text-sm font-medium mb-1 block">
                   Select Language
                 </label>
-                <Select
-                  value={template.language}
-                  onValueChange={(value) =>
-                    setTemplate({ ...template, language: value })
-                  }
-                >
+                <Select value={language} onValueChange={v=>setLanguage(v)}>
                   <SelectTrigger id="language">
                     <SelectValue placeholder="English" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Spanish</SelectItem>
-                    <SelectItem value="fr">French</SelectItem>
+                    <SelectItem value="en_US">English (US)</SelectItem>
+                    <SelectItem value="en_GB">English (UK)</SelectItem>
+                    <SelectItem value="es_ES">Spanish (ES)</SelectItem>
+                    <SelectItem value="fr_FR">French (FR)</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground mt-1">Format ll_CC e.g. en_US</p>
               </div>
             </div>
           </div>
-
-          {/* Header Accordion */}
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="header">
-              <AccordionTrigger>Header</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Add a title or choose which type of media to use for the
-                    header.
-                  </p>
-                  <div>
-                    <label htmlFor="headerType" className="text-sm font-medium mb-1 block">
-                      Header type
-                    </label>
-                    <Select
-                      value={template.header_type}
-                      onValueChange={(value) =>
-                        setTemplate({ ...template, header_type: value })
-                      }
-                    >
-                      <SelectTrigger id="headerType">
-                        <SelectValue placeholder="Media" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="media">Media</SelectItem>
-                        <SelectItem value="text">Text</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-[1fr,auto] gap-4">
-                    <Input
-                      type="file"
-                      className="cursor-pointer"
-                      onChange={handleFileChange}
-                    />
-                    <Button type="button">Upload</Button>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <input type="checkbox" className="h-4 w-4" checked={headerEnabled} onChange={e=>setHeaderEnabled(e.target.checked)} /> Header (text)
+            </label>
+            {headerEnabled && <Input placeholder="E.g. Order Update" value={headerText} onChange={e=>setHeaderText(e.target.value)} maxLength={60} />}
+            <p className="text-xs text-muted-foreground">Optional short title (max 60 chars).</p>
+          </div>
 
           <div>
             <label htmlFor="bodyText" className="text-sm font-medium mb-1 block">
               Body Text
             </label>
-            <Textarea
-              id="bodyText"
-              value={template.body_text}
-              onChange={(e) => setTemplate({ ...template, body_text: e.target.value })}
-              rows={6}
-            />
+            <Textarea id="bodyText" value={body} onChange={e=>setBody(e.target.value)} rows={6} />
+            <p className="text-xs text-muted-foreground mt-1">Use placeholders <code>{'{'}{'{'}1{'}'}{'}'}</code>, <code>{'{'}{'{'}2{'}'}{'}'}</code> etc. Provide sample values below for approval.</p>
+          </div>
+          {placeholders.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Placeholder Samples</p>
+              <div className="grid gap-2" style={{gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))'}}>
+                {placeholders.map((p,i)=>(
+                  <Input key={p} placeholder={`{{${p}}} sample`} value={sampleValues[i]||''} onChange={e=>{ const next=[...sampleValues]; next[i]=e.target.value; setSampleValues(next) }} />
+                ))}
+              </div>
+            </div>
+          )}
+          <div>
+            <label className="text-sm font-medium mb-1 block">Footer (optional)</label>
+            <Input value={footer} onChange={e=>setFooter(e.target.value)} maxLength={60} placeholder="Customer Support: reply HELP" />
           </div>
         </div>
 
@@ -204,16 +158,9 @@ export function TemplateForm({ onSubmit, initialTemplate }: TemplateFormProps) {
                 <div className="bg-[#ECE5DD] p-4 min-h-[400px]">
                   <Card className="max-w-[85%] bg-white">
                     <CardContent className="p-4">
-                      {template.header_type === "media" && (
-                        <div className="aspect-video bg-muted rounded-lg mb-3 flex items-center justify-center text-sm text-muted-foreground">
-                          {template.header_media
-                            ? `Uploaded: ${template.header_media.name}`
-                            : "Upload a media to preview"}
-                        </div>
-                      )}
-                      <p className="text-sm">
-                        {replaceVariables(template.body_text)}
-                      </p>
+                      {headerEnabled && headerText && <p className="text-xs font-semibold mb-2">{headerText}</p>}
+                      <p className="text-sm whitespace-pre-wrap">{previewBody}</p>
+                      {footer && <p className="text-[11px] text-muted-foreground mt-3">{footer}</p>}
                     </CardContent>
                   </Card>
                 </div>
@@ -222,10 +169,13 @@ export function TemplateForm({ onSubmit, initialTemplate }: TemplateFormProps) {
           </div>
         </div>
       </div>
-
-      <div className="flex justify-end gap-4 mt-6">
-        <Button type="button" variant="outline">Cancel</Button>
-        <Button type="submit">Send for approval</Button>
+      <div className="flex justify-between items-center gap-4 mt-6 flex-wrap">
+        <div className="text-xs flex-1 text-muted-foreground space-y-1">
+          <p>Placeholders must be sequential starting at 1.</p>
+          {error && <p className="text-red-600">{error}</p>}
+          {success && <p className="text-green-600">{success}</p>}
+        </div>
+        <Button type="submit" disabled={submitting}>{submitting ? 'Submitting...' : 'Send for approval'}</Button>
       </div>
     </form>
   );

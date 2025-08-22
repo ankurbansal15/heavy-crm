@@ -419,6 +419,15 @@ const tables: Record<string, string> = {
     CREATE POLICY "Users can delete their own templates"
       ON templates FOR DELETE
       USING (auth.uid() = user_id);
+
+  -- Additional columns for WhatsApp template management (idempotent)
+  ALTER TABLE templates ADD COLUMN IF NOT EXISTS provider_template_id TEXT;
+  ALTER TABLE templates ADD COLUMN IF NOT EXISTS status VARCHAR(50);
+  ALTER TABLE templates ADD COLUMN IF NOT EXISTS review_status VARCHAR(50);
+  ALTER TABLE templates ADD COLUMN IF NOT EXISTS raw JSONB;
+  ALTER TABLE templates ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+  ALTER TABLE templates ADD COLUMN IF NOT EXISTS buttons JSONB DEFAULT '[]'::jsonb;
+  CREATE INDEX IF NOT EXISTS idx_templates_provider_tpl ON templates(provider_template_id);
   `,
 
   // Campaigns

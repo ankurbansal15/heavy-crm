@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from '@/components/auth-provider'
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -22,7 +23,7 @@ const templates = [
 ]
 
 export default function ComposeEmailPage() {
-  const [email, setEmail] = useState({
+  const [email, setEmail] = useState<{ to: string; subject: string; content: string; template: string; attachments: File[]; scheduledTime: string }>({
     to: "",
     subject: "",
     content: "",
@@ -43,9 +44,15 @@ export default function ComposeEmailPage() {
     }
   }
 
-  const handleSend = () => {
-    // Implement send logic here
-    console.log("Sending email:", email)
+  const { session } = useAuth()
+  const handleSend = async () => {
+    const res = await fetch('/api/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ channel: 'email', to: email.to, subject: email.subject, content: email.content, html: null, schedule_at: email.scheduledTime || null })
+    })
+    const data = await res.json()
+    console.log('Send result', data)
   }
 
   return (

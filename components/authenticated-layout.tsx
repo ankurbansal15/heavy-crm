@@ -8,6 +8,8 @@ import { useRouter, usePathname } from 'next/navigation'
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Suspense } from 'react'
 import { useDatabaseInit } from '@/hooks/use-database-init'
+import { GlobalStatusBanner } from '@/components/global-status-banner'
+import { supabase } from '@/lib/supabase'
 
 // Exact public routes (no auth required)
 const publicRoutes = ['/', '/login', '/signup', '/pricing', '/contact', '/about', '/features', '/security', '/privacy', '/terms']
@@ -55,13 +57,29 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
 
   // Handle authentication redirects after loading is complete
   React.useEffect(() => {
-    if (!loading) {
-      if (!user && !publicAllowed) {
-        router.replace('/login')
-      } else if (user && (pathname === '/login' || pathname === '/signup')) {
-        router.replace('/dashboard')
+    if (loading) return
+    if (!user && !publicAllowed) {
+      router.replace('/login')
+      return
+    }
+    if (user && (pathname === '/login' || pathname === '/signup')) {
+      router.replace('/dashboard')
+      return
+    }
+    const checkOnboarding = async () => {
+      if (!user) return
+      if (publicAllowed) return
+      if (pathname === '/onboarding') return
+      try {
+  const { data, error } = await supabase.from('api_config').select('id').eq('user_id', user.id).limit(1)
+        if (!error && data && data.length === 0) {
+          router.replace('/onboarding')
+        }
+      } catch (e) {
+        console.warn('Onboarding check failed', e)
       }
     }
+    checkOnboarding()
   }, [user, loading, publicAllowed, pathname, router])
 
   // If route is public, just render it (even if user logged in we allow marketing pages)
@@ -107,6 +125,7 @@ function ProtectedShell({ children, pathname }: { children: React.ReactNode, pat
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <main className="flex-1 overflow-auto p-6 md:p-8 bg-gray-50 dark:bg-black relative">
+            <GlobalStatusBanner />
             <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>
           </main>
         </div>

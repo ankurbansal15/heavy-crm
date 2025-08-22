@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from '@/components/auth-provider'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -42,6 +43,34 @@ const initialChats = [
 
 export default function MessagesPage() {
   const [chats, setChats] = useState(initialChats)
+  const { session } = useAuth()
+  useEffect(() => {
+    if (!session) return
+    const load = async () => {
+      const res = await fetch('/api/messages?channel=whatsapp', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      const data = await res.json()
+      if (data.messages) {
+        const groups: Record<string, any[]> = {}
+        data.messages.forEach((m: any) => {
+          const key = m.direction === 'inbound' ? m.from : m.to
+            if (!groups[key]) groups[key] = []
+          groups[key].push(m)
+        })
+        const chatList = Object.entries(groups).map(([k, msgs], idx) => ({
+          id: idx + 1,
+          name: k,
+          lastMessage: (msgs as any)[0]?.body_text?.slice(0,60) || '',
+          avatar: '/placeholder-user.jpg',
+          messages: (msgs as any).map((m: any, midx: number) => ({ id: midx+1, text: m.body_text, sender: m.direction === 'inbound' ? 'customer' : 'agent' }))
+        }))
+        if (chatList.length) {
+          setChats(chatList)
+          setSelectedChat(chatList[0])
+        }
+      }
+    }
+    load()
+  }, [session])
   const [selectedChat, setSelectedChat] = useState(chats[0])
   const [newMessage, setNewMessage] = useState("")
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from '@/components/auth-provider'
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -32,9 +33,15 @@ export default function ComposePage() {
     }
   }
 
-  const handleSend = () => {
-    // Implement send logic here
-    console.log("Sending message:", message)
+  const { session } = useAuth()
+  const handleSend = async () => {
+    const res = await fetch('/api/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ channel: 'whatsapp', to: 'DEST_NUMBER', content: message })
+    })
+    const data = await res.json()
+    console.log('Send result', data)
   }
 
   return (
