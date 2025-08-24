@@ -28,10 +28,31 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' })
+  interface SortConfig { key: keyof Project | null; direction: 'ascending' | 'descending' }
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'ascending' })
   const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [editFields, setEditFields] = useState({
+    name: '',
+    description: '',
+    deadline: '',
+    priority: '' as Project['priority'] | '',
+    budget: '',
+    spent: '',
+    assigned_to: ''
+  })
   const [isAddPipelineDialogOpen, setIsAddPipelineDialogOpen] = useState(false)
   const [newPipelineName, setNewPipelineName] = useState('')
+  const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false)
+  const [newProjectData, setNewProjectData] = useState({
+    name: '',
+    description: '',
+    deadline: '',
+    priority: '' as Project['priority'] | '',
+    budget: '',
+    assigned_to: ''
+  })
+  const [isAddStageDialogOpen, setIsAddStageDialogOpen] = useState(false)
+  const [newStageNameInput, setNewStageNameInput] = useState('')
   const { user } = useAuth()
 
   useEffect(() => {
@@ -48,7 +69,7 @@ export default function ProjectsPage() {
   }, [pipelines, currentPipeline])
 
   useEffect(() => {
-    let result = projects
+  let result = [...projects]
     
     if (currentPipeline) {
       result = result.filter(project => currentPipeline.stages.some(stage => stage.id === project.stage_id))
@@ -65,12 +86,13 @@ export default function ProjectsPage() {
     
     if (sortConfig.key) {
       result.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? -1 : 1
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? 1 : -1
-        }
+        const aVal = a[sortConfig.key!]
+        const bVal = b[sortConfig.key!]
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return 1
+        if (bVal == null) return -1
+        if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1
+        if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1
         return 0
       })
     }
@@ -243,15 +265,17 @@ export default function ProjectsPage() {
     }
   }
 
-  const handleSort = (key) => {
-    let direction = 'ascending'
+  const handleSort = (key: keyof Project) => {
+    let direction: 'ascending' | 'descending' = 'ascending'
     if (sortConfig.key === key && sortConfig.direction === 'ascending') {
       direction = 'descending'
     }
     setSortConfig({ key, direction })
   }
 
-  const handleAddProject = async (newProject) => {
+  const handleAddProject = async (newProject: Partial<Project>) => {
+    if (!currentPipeline || !user) return
+    if (!newProject.name || !newProject.priority) return
     const { data, error } = await supabase
       .from('projects')
       .insert([{ 
@@ -269,7 +293,7 @@ export default function ProjectsPage() {
     }
   }
 
-  const handleEditProject = async (editedProject) => {
+  const handleEditProject = async (editedProject: Project) => {
     const { error } = await supabase
       .from('projects')
       .update(editedProject)
@@ -283,7 +307,7 @@ export default function ProjectsPage() {
     setEditingProject(null)
   }
 
-  const handleDeleteProject = async (id) => {
+  const handleDeleteProject = async (id: string) => {
     const { error } = await supabase
       .from('projects')
       .delete()
@@ -296,30 +320,32 @@ export default function ProjectsPage() {
     }
   }
 
-  const handleAddStage = async (newStageName) => {
+  const handleAddStage = async (newStageName: string) => {
+    if (!currentPipeline || !user || !newStageName.trim()) return
     const { data, error } = await supabase
       .from('project_stages')
       .insert([{ 
         name: newStageName, 
-        pipeline_id: currentPipeline.id,
-        position: currentPipeline.stages.length,
-        user_id: user.id
+        pipeline_id: currentPipeline!.id,
+        position: currentPipeline!.stages.length,
+        user_id: user!.id
       }])
       .select()
 
     if (error) {
       console.error('Error adding stage:', error)
     } else if (data) {
-      const updatedPipeline = { 
-        ...currentPipeline, 
-        stages: [...currentPipeline.stages, data[0]]
+      const updatedPipeline: ProjectPipeline = { 
+        ...currentPipeline!, 
+        stages: [...currentPipeline!.stages, data[0]]
       }
       setPipelines(pipelines.map(p => p.id === updatedPipeline.id ? updatedPipeline : p))
       setCurrentPipeline(updatedPipeline)
     }
   }
 
-  const handleEditStage = async (oldStageId, newStageName) => {
+  const handleEditStage = async (oldStageId: string, newStageName: string) => {
+    if (!currentPipeline) return
     const { error } = await supabase
       .from('project_stages')
       .update({ name: newStageName })
@@ -328,16 +354,17 @@ export default function ProjectsPage() {
     if (error) {
       console.error('Error updating stage:', error)
     } else {
-      const updatedStages = currentPipeline.stages.map(stage => 
+      const updatedStages = currentPipeline!.stages.map(stage => 
         stage.id === oldStageId ? { ...stage, name: newStageName } : stage
       )
-      const updatedPipeline = { ...currentPipeline, stages: updatedStages }
+      const updatedPipeline: ProjectPipeline = { ...currentPipeline!, stages: updatedStages }
       setPipelines(pipelines.map(p => p.id === updatedPipeline.id ? updatedPipeline : p))
       setCurrentPipeline(updatedPipeline)
     }
   }
 
-  const handleDeleteStage = async (stageId) => {
+  const handleDeleteStage = async (stageId: string) => {
+    if (!currentPipeline) return
     const { error } = await supabase
       .from('project_stages')
       .delete()
@@ -346,8 +373,8 @@ export default function ProjectsPage() {
     if (error) {
       console.error('Error deleting stage:', error)
     } else {
-      const updatedStages = currentPipeline.stages.filter(s => s.id !== stageId)
-      const updatedPipeline = { ...currentPipeline, stages: updatedStages }
+      const updatedStages = currentPipeline!.stages.filter(s => s.id !== stageId)
+      const updatedPipeline: ProjectPipeline = { ...currentPipeline!, stages: updatedStages }
       setPipelines(pipelines.map(p => p.id === updatedPipeline.id ? updatedPipeline : p))
       setCurrentPipeline(updatedPipeline)
       setProjects(projects.filter(project => project.stage_id !== stageId))
@@ -424,6 +451,23 @@ export default function ProjectsPage() {
     }
   }
 
+  const handleStartEditProject = (project: Project) => {
+    setEditingProject(project)
+    setEditFields({
+      name: project.name,
+      description: project.description,
+      deadline: project.deadline,
+      priority: project.priority,
+      budget: String(project.budget),
+      spent: String(project.spent),
+      assigned_to: project.assigned_to
+    })
+  }
+
+  const resetNewProjectForm = () => {
+    setNewProjectData({ name: '', description: '', deadline: '', priority: '', budget: '', assigned_to: '' })
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       {/* Hero Header Section */}
@@ -435,9 +479,7 @@ export default function ProjectsPage() {
         <div className="relative z-10 p-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-fade-in">
             <div className="space-y-3">
-              <h1 className="text-heading-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent font-bold">
-                Project Management
-              </h1>
+              <h1 className="text-heading-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent font-bold">Project Management</h1>
               <p className="text-body text-muted-foreground">
                 Organize and track your projects with customizable pipelines
               </p>
@@ -447,7 +489,7 @@ export default function ProjectsPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Select value={currentPipeline?.id} onValueChange={(value) => setCurrentPipeline(pipelines.find(p => p.id === value))}>
+              <Select value={currentPipeline?.id} onValueChange={(value) => setCurrentPipeline(pipelines.find(p => p.id === value) || null)}>
                 <SelectTrigger className="glass-effect border-0 shadow-lg hover-lift min-w-[200px]">
                   <SelectValue placeholder="Select pipeline" />
                 </SelectTrigger>
@@ -496,28 +538,14 @@ export default function ProjectsPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <CardTitle className="text-heading-4 flex items-center gap-2">
                 Project Board
-                <span className="text-sm font-normal text-muted-foreground">
-                  ({filteredProjects.length} projects)
-                </span>
+                <span className="text-sm font-normal text-muted-foreground">({filteredProjects.length} projects)</span>
               </CardTitle>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="glass-effect border-0 shadow-md hover-lift">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Add Stage
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="glass-effect border-0 shadow-xl">{" "}
-              <DialogHeader>
-                <DialogTitle>Add New Stage</DialogTitle>
-              </DialogHeader>
-              <Input id="newStage" placeholder="Enter new stage name" />
-              <DialogFooter>
-                <Button onClick={() => handleAddStage(document.getElementById('newStage').value)}>Add Stage</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
+              <Button variant="outline" size="sm" className="glass-effect border-0 shadow-md hover-lift" onClick={() => setIsAddStageDialogOpen(true)}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Stage
+              </Button>
+            </div>
+          </CardHeader>
         <CardDescription className="px-6">Drag and drop projects to update their stage</CardDescription>
         <div className="px-6 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="relative w-full sm:w-auto">
@@ -532,7 +560,7 @@ export default function ProjectsPage() {
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => handleSort('deadline')}>Sort by Deadline</Button>
             <Button onClick={() => handleSort('priority')}>Sort by Priority</Button>
-            <Dialog>
+            <Dialog open={isAddProjectDialogOpen} onOpenChange={(o) => { setIsAddProjectDialogOpen(o); if(!o) resetNewProjectForm() }}>
               <DialogTrigger asChild>
                 <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -545,22 +573,35 @@ export default function ProjectsPage() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input id="name" />
+                    <Label>Name</Label>
+                    <Input
+                      value={newProjectData.name}
+                      onChange={(e) => setNewProjectData(p => ({ ...p, name: e.target.value }))}
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" />
+                    <Label>Description</Label>
+                    <Textarea
+                      value={newProjectData.description}
+                      onChange={(e) => setNewProjectData(p => ({ ...p, description: e.target.value }))}
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="deadline">Deadline</Label>
-                      <Input id="deadline" type="date" />
+                      <Label>Deadline</Label>
+                      <Input
+                        type="date"
+                        value={newProjectData.deadline}
+                        onChange={(e) => setNewProjectData(p => ({ ...p, deadline: e.target.value }))}
+                      />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="priority">Priority</Label>
-                      <Select>
-                        <SelectTrigger id="priority">
+                      <Label>Priority</Label>
+                      <Select
+                        value={newProjectData.priority}
+                        onValueChange={(v: Project['priority']) => setNewProjectData(p => ({ ...p, priority: v }))}
+                      >
+                        <SelectTrigger>
                           <SelectValue placeholder="Select priority" />
                         </SelectTrigger>
                         <SelectContent>
@@ -573,26 +614,40 @@ export default function ProjectsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="budget">Budget</Label>
-                      <Input id="budget" type="number" />
+                      <Label>Budget</Label>
+                      <Input
+                        type="number"
+                        value={newProjectData.budget}
+                        onChange={(e) => setNewProjectData(p => ({ ...p, budget: e.target.value }))}
+                      />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="assigned">Assigned To</Label>
-                      <Input id="assigned" />
+                      <Label>Assigned To</Label>
+                      <Input
+                        value={newProjectData.assigned_to}
+                        onChange={(e) => setNewProjectData(p => ({ ...p, assigned_to: e.target.value }))}
+                      />
                     </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button onClick={() => handleAddProject({
-                    name: document.getElementById('name').value,
-                    description: document.getElementById('description').value,
-                    deadline: document.getElementById('deadline').value,
-                    priority: document.getElementById('priority').value,
-                    budget: Number(document.getElementById('budget').value),
-                    spent: 0,
-                    assigned_to: document.getElementById('assigned').value,
-                    status: 'Not Started'
-                  })}>Add Project</Button>
+                  <Button
+                    disabled={!newProjectData.name.trim() || !newProjectData.priority}
+                    onClick={async () => {
+                      await handleAddProject({
+                        name: newProjectData.name.trim(),
+                        description: newProjectData.description.trim(),
+                        deadline: newProjectData.deadline,
+                        priority: newProjectData.priority as Project['priority'],
+                        budget: Number(newProjectData.budget) || 0,
+                        spent: 0,
+                        assigned_to: newProjectData.assigned_to.trim(),
+                        status: 'Not Started'
+                      })
+                      resetNewProjectForm()
+                      setIsAddProjectDialogOpen(false)
+                    }}
+                  >Add Project</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -608,7 +663,7 @@ export default function ProjectsPage() {
               onEditStage={handleEditStage}
               onDeleteStage={handleDeleteStage}
               onMoveProject={handleMoveProject}
-              onEditProject={setEditingProject}
+              onEditProject={handleStartEditProject}
               onDeleteProject={handleDeleteProject}
             />
           </div>
@@ -616,29 +671,42 @@ export default function ProjectsPage() {
       </Card>
 
       {editingProject && (
-        <Dialog open={!!editingProject} onOpenChange={() => setEditingProject(null)}>
+        <Dialog open={!!editingProject} onOpenChange={(o) => { if(!o) setEditingProject(null) }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Project</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">Name</Label>
-                <Input id="edit-name" defaultValue={editingProject.name} />
+                <Label>Name</Label>
+                <Input
+                  value={editFields.name}
+                  onChange={(e) => setEditFields(f => ({ ...f, name: e.target.value }))}
+                />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea id="edit-description" defaultValue={editingProject.description} />
+                <Label>Description</Label>
+                <Textarea
+                  value={editFields.description}
+                  onChange={(e) => setEditFields(f => ({ ...f, description: e.target.value }))}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-deadline">Deadline</Label>
-                  <Input id="edit-deadline" type="date" defaultValue={editingProject.deadline} />
+                  <Label>Deadline</Label>
+                  <Input
+                    type="date"
+                    value={editFields.deadline}
+                    onChange={(e) => setEditFields(f => ({ ...f, deadline: e.target.value }))}
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-priority">Priority</Label>
-                  <Select defaultValue={editingProject.priority}>
-                    <SelectTrigger id="edit-priority">
+                  <Label>Priority</Label>
+                  <Select
+                    value={editFields.priority}
+                    onValueChange={(v: Project['priority']) => setEditFields(f => ({ ...f, priority: v }))}
+                  >
+                    <SelectTrigger>
                       <SelectValue placeholder="Select priority" />
                     </SelectTrigger>
                     <SelectContent>
@@ -651,34 +719,76 @@ export default function ProjectsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-budget">Budget</Label>
-                  <Input id="edit-budget" type="number" defaultValue={editingProject.budget} />
+                  <Label>Budget</Label>
+                  <Input
+                    type="number"
+                    value={editFields.budget}
+                    onChange={(e) => setEditFields(f => ({ ...f, budget: e.target.value }))}
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-spent">Spent</Label>
-                  <Input id="edit-spent" type="number" defaultValue={editingProject.spent} />
+                  <Label>Spent</Label>
+                  <Input
+                    type="number"
+                    value={editFields.spent}
+                    onChange={(e) => setEditFields(f => ({ ...f, spent: e.target.value }))}
+                  />
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-assigned">Assigned To</Label>
-                <Input id="edit-assigned" defaultValue={editingProject.assigned_to} />
+                <Label>Assigned To</Label>
+                <Input
+                  value={editFields.assigned_to}
+                  onChange={(e) => setEditFields(f => ({ ...f, assigned_to: e.target.value }))}
+                />
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={() => handleEditProject({
-                ...editingProject,
-                name: document.getElementById('edit-name').value,
-                description: document.getElementById('edit-description').value,
-                deadline: document.getElementById('edit-deadline').value,
-                priority: document.getElementById('edit-priority').value,
-                budget: Number(document.getElementById('edit-budget').value),
-                spent: Number(document.getElementById('edit-spent').value),
-                assigned_to: document.getElementById('edit-assigned').value,
-              })}>Save Changes</Button>
+              <Button
+                disabled={!editFields.name.trim() || !editFields.priority}
+                onClick={async () => {
+                  if(!editingProject) return
+                  await handleEditProject({
+                    ...editingProject,
+                    name: editFields.name.trim(),
+                    description: editFields.description.trim(),
+                    deadline: editFields.deadline,
+                    priority: editFields.priority as Project['priority'],
+                    budget: Number(editFields.budget) || 0,
+                    spent: Number(editFields.spent) || 0,
+                    assigned_to: editFields.assigned_to.trim(),
+                  })
+                  setEditingProject(null)
+                }}
+              >Save Changes</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
+      <Dialog open={isAddStageDialogOpen} onOpenChange={(o) => { setIsAddStageDialogOpen(o); if(!o) setNewStageNameInput('') }}>
+        <DialogContent className="glass-effect border-0 shadow-xl">
+          <DialogHeader>
+            <DialogTitle>Add New Stage</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Enter new stage name"
+            value={newStageNameInput}
+            onChange={(e) => setNewStageNameInput(e.target.value)}
+          />
+          <DialogFooter>
+            <Button
+              disabled={!newStageNameInput.trim()}
+              onClick={async () => {
+                await handleAddStage(newStageNameInput.trim())
+                setNewStageNameInput('')
+                setIsAddStageDialogOpen(false)
+              }}
+            >Add Stage</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+  {/* Close Main Content wrapper */}
+  </div>
     </div>
   )
 }

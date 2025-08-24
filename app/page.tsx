@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MessageCircle, Mail, MessageSquare, Shield, BarChart3, Users, Star, ArrowRight, Play, CheckCircle, Globe, Zap, HeartHandshake } from 'lucide-react'
 import { PublicHeader } from "@/components/public-header"
-
+import Image from 'next/image'
+import DashboardLight from '../public/dashboard-light-mode.png'
+import DashboardDark from '../public/dashboard-dark-mode.png'
 export default function LandingPage() {
   const { user } = useAuth()
   const router = useRouter()
@@ -80,13 +82,13 @@ export default function LandingPage() {
               <div className="relative mx-auto max-w-6xl">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl blur-2xl"></div>
                 <div className="relative card-glass p-4">
-                  <img 
-                    src="https://iptjebccpueqamhngjaw.supabase.co/storage/v1/object/public/images/LightModDashboard.png"
+                  <Image 
+                    src={DashboardLight}
                     className="rounded-xl shadow-2xl border border-white/20 dark:hidden w-full"
                     alt="Dashboard Preview Light Mode"
                   />
-                  <img 
-                    src="https://iptjebccpueqamhngjaw.supabase.co/storage/v1/object/public/images/DarkModDashboard.png"
+                  <Image 
+                    src={DashboardDark}
                     className="rounded-xl shadow-2xl border border-white/20 hidden dark:block w-full"
                     alt="Dashboard Preview Dark Mode"
                   />
