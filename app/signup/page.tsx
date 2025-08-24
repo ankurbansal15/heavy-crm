@@ -69,7 +69,8 @@ export default function SignUpPage() {
       router.push('/dashboard')
       router.refresh()
     } catch (error) {
-      setError(error.message)
+      const message = error instanceof Error ? error.message : 'Unexpected error occurred'
+      setError(message)
     } finally {
       setIsLoading(false)
     }
@@ -89,7 +90,8 @@ export default function SignUpPage() {
 
       if (error) throw error
     } catch (error) {
-      setError(error.message)
+      const message = error instanceof Error ? error.message : 'Unexpected error occurred'
+      setError(message)
     } finally {
       setIsLoading(false)
     }
@@ -109,19 +111,21 @@ export default function SignUpPage() {
 
       if (error) throw error
     } catch (error) {
-      setError(error.message)
+      const message = error instanceof Error ? error.message : 'Unexpected error occurred'
+      setError(message)
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-hero relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 dark:bg-gradient-hero">
       {/* Background Elements */}
-      <div className="absolute inset-0 bg-gradient-radial"></div>
-      <div className="absolute inset-0 hero-overlay"></div>
-      <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-bounce-gentle"></div>
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-bounce-gentle" style={{animationDelay: '1s'}}></div>
+      <div className="absolute inset-0 opacity-60 dark:opacity-100 bg-gradient-radial pointer-events-none"></div>
+      {/* Overlay: lighter subtle for light, rich for dark */}
+      <div className="absolute inset-0 bg-white/60 dark:hero-overlay dark:bg-transparent backdrop-blur-md"></div>
+      <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400/20 dark:bg-blue-500/10 rounded-full blur-3xl animate-bounce-gentle"></div>
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/20 dark:bg-purple-500/10 rounded-full blur-3xl animate-bounce-gentle" style={{animationDelay: '1s'}}></div>
       
       <PublicHeader />
       
@@ -130,25 +134,25 @@ export default function SignUpPage() {
           {/* Logo and Branding */}
           <div className="text-center mb-8 animate-fade-in">
             <div className="inline-flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-primary flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-md">
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-white hero-text-shadow">HeavyCRM</span>
+              <span className="text-2xl font-bold text-foreground dark:text-white dark:hero-text-shadow">HeavyCRM</span>
             </div>
-            <p className="text-white/90 hero-text-shadow">Start your communication journey today</p>
+            <p className="text-muted-foreground dark:text-white/90 dark:hero-text-shadow">Start your communication journey today</p>
           </div>
 
-          <Card className="card-glass backdrop-blur-xl border-white/20 shadow-2xl animate-slide-up">
+          <Card className="card-primary dark:card-glass backdrop-blur-xl shadow-2xl animate-slide-up">
             <CardHeader className="text-center space-y-2 pb-6">
-              <CardTitle className="text-2xl font-bold text-white hero-text-shadow">Create Account</CardTitle>
-              <CardDescription className="text-white/90 hero-text-shadow">
+              <CardTitle className="text-2xl font-bold text-foreground dark:text-white dark:hero-text-shadow">Create Account</CardTitle>
+              <CardDescription className="text-muted-foreground dark:text-white/90 dark:hero-text-shadow">
                 Join thousands of businesses using our platform
               </CardDescription>
             </CardHeader>
             
             <CardContent className="space-y-6">
               {error && (
-                <Alert variant="destructive" className="border-red-500/50 bg-red-500/10 text-white">
+                <Alert variant="destructive" className="border-red-500/30 dark:border-red-500/50 bg-red-500/10 text-red-700 dark:text-white">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
@@ -160,12 +164,12 @@ export default function SignUpPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white font-medium">Email Address</FormLabel>
+                        <FormLabel className="text-foreground dark:text-white font-medium">Email Address</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="Enter your email address" 
-                            className="input-primary bg-white/10 border-white/20 text-white placeholder-white/50 focus:bg-white/20 transition-all duration-300"
-                            {...field} 
+                          <Input
+                            placeholder="Enter your email address"
+                            className="input-primary placeholder:text-muted-foreground dark:placeholder-white/50"
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage className="text-red-300" />
@@ -177,20 +181,20 @@ export default function SignUpPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white font-medium">Password</FormLabel>
+        <FormLabel className="text-foreground dark:text-white font-medium">Password</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="Create a secure password"
-                              className="input-primary bg-white/10 border-white/20 text-white placeholder-white/50 focus:bg-white/20 transition-all duration-300 pr-12"
+          className="input-primary placeholder:text-muted-foreground dark:placeholder-white/50 pr-12"
                               {...field}
                             />
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-white/10 text-white/70 hover:text-white"
+          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-accent/50 dark:hover:bg-white/10 text-muted-foreground dark:text-white/70 hover:text-foreground dark:hover:text-white"
                               onClick={() => setShowPassword(!showPassword)}
                             >
                               {showPassword ? (
@@ -213,20 +217,20 @@ export default function SignUpPage() {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white font-medium">Confirm Password</FormLabel>
+        <FormLabel className="text-foreground dark:text-white font-medium">Confirm Password</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Input
                               type={showConfirmPassword ? "text" : "password"}
                               placeholder="Confirm your password"
-                              className="input-primary bg-white/10 border-white/20 text-white placeholder-white/50 focus:bg-white/20 transition-all duration-300 pr-12"
+          className="input-primary placeholder:text-muted-foreground dark:placeholder-white/50 pr-12"
                               {...field}
                             />
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-white/10 text-white/70 hover:text-white"
+          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-accent/50 dark:hover:bg-white/10 text-muted-foreground dark:text-white/70 hover:text-foreground dark:hover:text-white"
                               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                             >
                               {showConfirmPassword ? (
@@ -263,7 +267,7 @@ export default function SignUpPage() {
                   <div className="w-full border-t border-white/20"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-transparent px-2 text-white/70 font-medium">Or continue with</span>
+                  <span className="bg-transparent px-2 text-muted-foreground dark:text-white/70 font-medium">Or continue with</span>
                 </div>
               </div>
               
@@ -272,7 +276,7 @@ export default function SignUpPage() {
                   variant="outline" 
                   onClick={handleGoogleSignUp} 
                   disabled={isLoading}
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-white/10 dark:border-white/20 dark:text-white dark:hover:bg-white/20 transition-all duration-300"
                 >
                   {isLoading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -302,7 +306,7 @@ export default function SignUpPage() {
                   variant="outline" 
                   onClick={handleGithubSignUp} 
                   disabled={isLoading}
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-white/10 dark:border-white/20 dark:text-white dark:hover:bg-white/20 transition-all duration-300"
                 >
                   {isLoading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -319,10 +323,10 @@ export default function SignUpPage() {
               </div>
             </CardContent>
             
-            <CardFooter className="text-center border-t border-white/10 pt-6">
-              <div className="text-sm text-white/70 w-full">
+            <CardFooter className="text-center border-t border-border dark:border-white/10 pt-6">
+              <div className="text-sm text-muted-foreground dark:text-white/70 w-full">
                 Already have an account?{' '}
-                <Link href="/login" className="text-white hover:text-white/80 font-medium transition-colors">
+                <Link href="/login" className="text-primary hover:text-primary/80 dark:text-white dark:hover:text-white/80 font-medium transition-colors">
                   Sign in
                 </Link>
               </div>
@@ -331,29 +335,29 @@ export default function SignUpPage() {
           
           {/* Benefits */}
           <div className="mt-8 space-y-4 animate-fade-in">
-            <div className="flex items-center gap-3 text-white/80">
-              <CheckCircle className="h-5 w-5 text-green-400" />
+            <div className="flex items-center gap-3 text-muted-foreground dark:text-white/80">
+              <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400" />
               <span className="text-sm">Free 14-day trial, no credit card required</span>
             </div>
-            <div className="flex items-center gap-3 text-white/80">
-              <CheckCircle className="h-5 w-5 text-green-400" />
+            <div className="flex items-center gap-3 text-muted-foreground dark:text-white/80">
+              <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400" />
               <span className="text-sm">Enterprise-grade security and compliance</span>
             </div>
-            <div className="flex items-center gap-3 text-white/80">
-              <CheckCircle className="h-5 w-5 text-green-400" />
+            <div className="flex items-center gap-3 text-muted-foreground dark:text-white/80">
+              <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400" />
               <span className="text-sm">24/7 customer support and onboarding</span>
             </div>
           </div>
           
           {/* Legal */}
           <div className="text-center mt-8 animate-fade-in">
-            <p className="text-white/60 text-xs">
+            <p className="text-muted-foreground dark:text-white/60 text-xs">
               By creating an account, you agree to our{' '}
-              <Link href="/terms" className="text-white/80 hover:text-white underline">
+              <Link href="/terms" className="text-primary hover:text-primary/80 dark:text-white/80 dark:hover:text-white underline">
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link href="/privacy" className="text-white/80 hover:text-white underline">
+              <Link href="/privacy" className="text-primary hover:text-primary/80 dark:text-white/80 dark:hover:text-white underline">
                 Privacy Policy
               </Link>
             </p>
